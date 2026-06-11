@@ -1,0 +1,437 @@
+{
+  "name": "Scheduled AI News Digest",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 7
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        64
+      ],
+      "id": "7b74210e-c516-44d4-8157-4a789479007c",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "url": "https://openai.com/news/rss.xml",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.2,
+      "position": [
+        224,
+        -224
+      ],
+      "id": "732ccbe0-00f3-4f98-a64f-a818f5a64265",
+      "name": "OpenAI"
+    },
+    {
+      "parameters": {
+        "url": "https://techcrunch.com/category/artificial-intelligence/feed/",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.2,
+      "position": [
+        224,
+        160
+      ],
+      "id": "9b681cd0-4638-47f1-a220-2bd4959ba410",
+      "name": "Tech Crunch AI"
+    },
+    {
+      "parameters": {
+        "url": "https://news.mit.edu/rss/topic/artificial-intelligence2",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.2,
+      "position": [
+        224,
+        352
+      ],
+      "id": "bf57e6ab-e89e-43e1-ba5c-f6154daef01c",
+      "name": "MIT AI"
+    },
+    {
+      "parameters": {
+        "url": "https://blog.google/technology/ai/rss/",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.2,
+      "position": [
+        224,
+        -32
+      ],
+      "id": "bb555633-de1c-4039-98e1-926e49074207",
+      "name": "Google AI"
+    },
+    {
+      "parameters": {
+        "numberInputs": 4
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        448,
+        32
+      ],
+      "id": "3d6d36e3-1020-44ed-9e1b-c46e84efdfec",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "4a1671ea-acff-497c-aac4-bac01641d8dc",
+              "leftValue": "={{$now.diff($json.pubDate, 'hours') < 24}}",
+              "rightValue": 24,
+              "operator": {
+                "type": "boolean",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        672,
+        64
+      ],
+      "id": "fdebca52-060d-4494-9158-2c862a3c5f58",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "maxItems": 5
+      },
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [
+        1120,
+        64
+      ],
+      "id": "f2b7d7c9-4ee1-416b-9caa-77f9a11525db",
+      "name": "Limit"
+    },
+    {
+      "parameters": {
+        "promptType": "=define",
+        "text": "=You are an AI News Analyst.\n\nAnalyze the article and return ONLY valid JSON.\n\nRequired format:\n\n{\n\"title\": \"\",\n\"category\": \"\",\n\"importance_score\": 0,\n\"summary\": \"\",\n\"industry_impact\": \"\",\n\"tags\": []\n}\n\nRules:\n\n* Return ONLY JSON.\n* No markdown.\n* No code blocks.\n* No explanations.\n* Summary must be 2-3 sentences.\n* Importance score must be 1-10.\n\nArticle Title:\n{{ $json.title }}\n\nArticle Content:\n{{ $json.contentSnippet || $json.content || $json.description }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "=<news_digest_agent>\n\n```\n<role>\n    You are an expert AI News Analyst and Technical Editor.\n    Your task is to analyze news articles and generate structured output.\n</role>\n\n<objective>\n    Extract the most important information from the article and return\n    ONLY valid XML matching the schema below.\n</objective>\n\n<rules>\n\n    <rule>\n        Return ONLY XML.\n        Do not include markdown.\n        Do not include code blocks.\n        Do not include explanations.\n    </rule>\n\n    <rule>\n        Always generate all fields.\n    </rule>\n\n    <rule>\n        If information is unavailable, write:\n        Unknown\n    </rule>\n\n    <rule>\n        Keep summaries concise and factual.\n    </rule>\n\n    <rule>\n        Importance score must be between 1 and 10.\n    </rule>\n\n</rules>\n\n<output_schema>\n\n    <article>\n\n        <title>\n            Article title\n        </title>\n\n        <source>\n            Publishing source\n        </source>\n\n        <published_date>\n            Publication date\n        </published_date>\n\n        <category>\n            One of:\n            AI Models,\n            AI Agents,\n            Robotics,\n            Startups,\n            Research,\n            Enterprise AI,\n            Funding,\n            Regulation,\n            Open Source,\n            Other\n        </category>\n\n        <importance_score>\n            Number from 1-10\n        </importance_score>\n\n        <executive_summary>\n            A 2-3 sentence summary.\n        </executive_summary>\n\n        <key_points>\n\n            <point>\n                First important point\n            </point>\n\n            <point>\n                Second important point\n            </point>\n\n            <point>\n                Third important point\n            </point>\n\n        </key_points>\n\n        <industry_impact>\n            Explain why this matters.\n        </industry_impact>\n\n        <trend_tags>\n\n            <tag>AI Agents</tag>\n            <tag>LLMs</tag>\n            <tag>Automation</tag>\n\n        </trend_tags>\n\n    </article>\n\n</output_schema>\n```\n\n</news_digest_agent>\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        1344,
+        64
+      ],
+      "id": "406a95fc-a762-4d2c-aa99-5933dee2eddf",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "jsCode": "const seen = new Set();\n\nreturn items.filter(item => {\n  const title = item.json.title;\n\n  if (seen.has(title)) {\n    return false;\n  }\n\n  seen.add(title);\n  return true;\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        896,
+        64
+      ],
+      "id": "46533d4b-ff77-4a5d-87f4-8f0ee4078919",
+      "name": "Remove Duplicates"
+    },
+    {
+      "parameters": {
+        "jsCode": "items.sort((a,b) =>\n  b.json.score - a.json.score\n);\n\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1696,
+        64
+      ],
+      "id": "ba488ec8-07c4-4022-878a-c0707c8dc7ef",
+      "name": "Rank Articles"
+    },
+    {
+      "parameters": {
+        "jsCode": "let html = `\n<html>\n<head>\n<style>\nbody {\n    font-family: Arial, sans-serif;\n    line-height: 1.6;\n    max-width: 800px;\n    margin: auto;\n    background-color: #f5f7fa;\n    padding: 20px;\n}\n\n.header {\n    background-color: #1f2937;\n    color: white;\n    padding: 20px;\n    border-radius: 10px;\n    text-align: center;\n}\n\n.article {\n    background: white;\n    padding: 20px;\n    margin-top: 20px;\n    border-radius: 10px;\n    box-shadow: 0 2px 8px rgba(0,0,0,0.08);\n}\n\n.title {\n    font-size: 22px;\n    font-weight: bold;\n    color: #111827;\n}\n\n.meta {\n    color: #6b7280;\n    margin-top: 5px;\n}\n\n.summary {\n    margin-top: 15px;\n}\n\n.impact {\n    margin-top: 15px;\n    padding-left: 15px;\n    border-left: 4px solid #2563eb;\n}\n\n.tags {\n    margin-top: 15px;\n    color: #2563eb;\n}\n\n.footer {\n    text-align: center;\n    color: #6b7280;\n    margin-top: 30px;\n    font-size: 12px;\n}\n</style>\n</head>\n<body>\n\n<div class=\"header\">\n    <h1>🤖 Daily AI News Digest</h1>\n    <p>${new Date().toDateString()}</p>\n</div>\n`;\n\nitems.forEach((item) => {\n\n    const news = item.json.output;\n\n    html += `\n    <div class=\"article\">\n\n        <div class=\"title\">\n            ${news.title}\n        </div>\n\n        <div class=\"meta\">\n            📂 ${news.category}\n            &nbsp;&nbsp;|&nbsp;&nbsp;\n            ⭐ ${news.importance_score}/10\n        </div>\n\n        <div class=\"summary\">\n            <h3>📋 Summary</h3>\n            <p>${news.summary}</p>\n        </div>\n\n        <div class=\"impact\">\n            <h3>🚀 Industry Impact</h3>\n            <p>${news.industry_impact}</p>\n        </div>\n\n        <div class=\"tags\">\n            🏷️ ${news.tags.join(\", \")}\n        </div>\n\n    </div>\n    `;\n});\n\nhtml += `\n<div class=\"footer\">\nGenerated automatically using n8n AI News Agent\n</div>\n\n</body>\n</html>\n`;\n\nreturn [{\n    json: {\n        html\n    }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1920,
+        64
+      ],
+      "id": "32290217-3358-4fb3-94ba-dd9724954bd3",
+      "name": "Final Digest"
+    },
+    {
+      "parameters": {
+        "sendTo": "awanf9377@gmail.com",
+        "subject": "=🤖 Daily AI News Digest - {{ $now.format('yyyy-MM-dd') }}",
+        "message": "={{ $json.html }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2144,
+        64
+      ],
+      "id": "de85e7aa-f38b-4c10-9a82-fbc263c627bd",
+      "name": "Send a message",
+      "webhookId": "ddb477ab-d5c5-4be9-a6c5-38fc95406e4b",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "U48vhvthGsw3lNzk",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"title\": \"OpenAI acquires Ona\",\n  \"category\": \"AI Agents\",\n  \"importance_score\": 8,\n  \"summary\": \"OpenAI announced...\",\n  \"industry_impact\": \"...\",\n  \"tags\": [\"Automation\",\"Enterprise AI\"]\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1472,
+        352
+      ],
+      "id": "c9a0708d-31c5-4795-bc84-c865e2bf35bf",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "model": "qwen3:8b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        1232,
+        304
+      ],
+      "id": "647e14bb-9279-47b8-818e-adcd9db2f7bb",
+      "name": "Ollama Chat Model",
+      "credentials": {
+        "ollamaApi": {
+          "id": "xyeSY4RsHZS8sSRS",
+          "name": "Ollama account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "OpenAI",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Tech Crunch AI",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "MIT AI",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Google AI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google AI": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Tech Crunch AI": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "MIT AI": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 3
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Remove Duplicates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limit": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Rank Articles",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Remove Duplicates": {
+      "main": [
+        [
+          {
+            "node": "Limit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rank Articles": {
+      "main": [
+        [
+          {
+            "node": "Final Digest",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Final Digest": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "80271984-3593-4cd9-b2ac-d7d568904656",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "75cfc46cfa9af33c885dd8e4849bb47e3a4a7ee52139ad49fc5d15a11ae268f5"
+  },
+  "id": "Ro4oQsnVTwug1G4e",
+  "tags": []
+}
